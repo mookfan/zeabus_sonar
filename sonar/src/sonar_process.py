@@ -162,8 +162,11 @@ def image_callback(ros_data):
 	global Img_frame, width, height, index
 	index += 1
 	print "index = %s" %index
-	np_arr = np.fromstring(ros_data.data, np.uint8)
-	Img_frame = cv2.resize(cv2.imdecode(np_arr, 1),(width, height))	
+	try:
+		print "Get an Image!"
+		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "bgra8"),(width, height))
+	except CvBridgeError, e:
+		print (e)
 
 def tracking_callback(msg):
 	print msg
