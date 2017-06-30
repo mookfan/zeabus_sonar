@@ -7,7 +7,7 @@ import numpy as np
 import roslib
 import rospy
 import math
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 from cv_bridge import CvBridge, CvBridgeError
 
 from sonar.msg import sonar_msg
