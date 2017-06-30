@@ -164,7 +164,7 @@ def image_callback(ros_data):
 	print "index = %s" %index
 	try:
 		print "Get an Image!"
-		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "bgra8"),(width, height))
+		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "mono8"),(width, height))
 	except CvBridgeError, e:
 		print (e)
 
