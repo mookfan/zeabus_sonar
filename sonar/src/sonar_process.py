@@ -8,6 +8,7 @@ import roslib
 import rospy
 import math
 from sensor_msgs.msg import CompressedImage
+from cv_bridge import CvBridge, CvBridgeError
 
 from sonar.msg import sonar_msg
 from sonar.srv import sonar_srv
