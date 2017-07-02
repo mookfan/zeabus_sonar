@@ -30,8 +30,8 @@ if __name__ == "__main__":
     print "Waiting"
     start = True
     count = 0
-    rospy.wait_for_service('sonar_image')
-    sonar_image = rospy.ServiceProxy('sonar_image', sonar_srv)
+    rospy.wait_for_service('/sonar_image')
+    sonar_image = rospy.ServiceProxy('/sonar_image', sonar_srv)
     print 'service start'
     while not rospy.is_shutdown():
 	    count += 1
