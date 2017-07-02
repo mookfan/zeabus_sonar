@@ -130,7 +130,7 @@ def Process():
 	right = int(round((Img_frame.shape[1]/2)+(Img_frame.shape[1]/4)))
 	
 	Img_gray = cv2.cvtColor(Img_frame, cv2.COLOR_BGR2GRAY)
-
+	 
 	if count == 1:
 		print "Corner", count
 		p0, mask = CornerDetect(Img_gray)
@@ -165,10 +165,12 @@ def image_callback(ros_data):
 	index += 1
 	print "index = %s" %index
 	try:
-		print "Get an Image!"
-		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "mono8"),(width, height))
+		#print "Get an Image!"
+		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "bgr8"),(width, height))
 	except CvBridgeError, e:
 		print (e)
+	#else:
+		#print "..."
 
 def tracking_callback(msg):
 	print msg
@@ -177,7 +179,7 @@ def tracking_callback(msg):
 
 if __name__ == '__main__':
 	rospy.init_node('SonarTracking', anonymous=True)
-	subTopic = '/img_sonar/compressed'
-	sub = rospy.Subscriber(subTopic, CompressedImage, image_callback,  queue_size = 1)
-	rospy.Service('sonar_image', sonar_srv(), tracking_callback)
+	subTopic = "/imaging_sonar"
+	sub = rospy.Subscriber(subTopic, Image, image_callback,  queue_size = 1)
+	rospy.Service('/sonar_image', sonar_srv(), tracking_callback)
 	rospy.spin()		
