@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#################### NO USE THIS FILE IN CVBRIDGE ###########################
+############################ USE ".cpp" #####################################
 import rospy
 import time
 import cv2
