@@ -179,7 +179,7 @@ def tracking_callback(msg):
 
 if __name__ == '__main__':
 	rospy.init_node('SonarTracking', anonymous=True)
-	subTopic = "/imaging_sonar"
+	subTopic = '/imaging_sonar'
 	sub = rospy.Subscriber(subTopic, Image, image_callback,  queue_size = 1)
 	rospy.Service('/sonar_image', sonar_srv(), tracking_callback)
 	rospy.spin()		
