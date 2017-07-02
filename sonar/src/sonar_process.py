@@ -88,17 +88,27 @@ def FindObject(Img_gray):
 			else:
 				r_met, theta_met = meters(Obj_x, Obj_y, x_ref, y_ref)
 				theta_met = theta_met + 90
-				r_met, theta_met = int(round(r_met)), int(round(theta_met))
 				print "Estimate # %d frame Object # %d: R = %.2f meters, Theta = %.2f" % (count, j + 1, r_met, theta_met)
+				r_met, theta_met = int(round(r_met)), int(round(theta_met))
 				r_out.append(r_met)
 				theta_out.append(theta_met)
-				cv2.circle(Img_sh, (Obj_x, Obj_y), 5, (102, 255, 204), -1)
+				cv2.circle(Img_sh, (Obj_x, Obj_y), 5, (0, 255, 0), -1)
 				pre_est_x, pre_est_y = Obj_x, Obj_y
+				pubIm(Img_sh)
+				#print "Published!"
 		status = True
 		#cv2.imshow('Object n frame', Img_sh)
 	else:
 		print "Can't find Object"
 	return r_out, theta_out, Img_sh
+
+def pubIm(im):
+	img_show = np.array(im, np.uint8)
+	msg1 = CompressedImage()
+	msg1.format = "jpeg"
+	msg1.header.stamp = rospy.Time.now()
+	msg1.data = np.array(cv2.imencode('.jpg', img_show)[1]).tostring()
+	pub.publish(msg1)
 
 def meters(x,y,x_ref, y_ref):
 	global r_met, theta_met, status
@@ -154,7 +164,7 @@ def Process():
 	res.r = r_out
 	res.theta = theta_out
 	res.status = status
-	cv2.waitKey(1)
+	#cv2.waitKey(1)
 	return res
 	
 def image_callback(ros_data):
@@ -171,7 +181,10 @@ def tracking_callback(msg):
 
 if __name__ == '__main__':
 	rospy.init_node('SonarTracking', anonymous=True)
+
+	pub = rospy.Publisher('/image/Tracking', CompressedImage, queue_size=1)
+
 	subTopic = '/img_sonar/compressed'
 	sub = rospy.Subscriber(subTopic, CompressedImage, image_callback,  queue_size = 1)
-	rospy.Service('sonar_image', sonar_srv(), tracking_callback)
+	rospy.Service('/sonar_image', sonar_srv(), tracking_callback)
 	rospy.spin()		
