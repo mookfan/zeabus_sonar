@@ -97,6 +97,7 @@ def FindObject(Img_gray):
 				theta_out.append(theta_met)
 				cv2.circle(Img_sh, (Obj_x, Obj_y), 5, (102, 255, 204), -1)
 				pre_est_x, pre_est_y = Obj_x, Obj_y
+				pubIm(Img_sh)
 		status = True
 		#cv2.imshow('Object n frame', Img_sh)
 	else:
@@ -112,6 +113,14 @@ def meters(x,y,x_ref, y_ref):
 	theta = ((math.atan2((x_ref - x_met), (y_ref - y_met))) * 360) / (2 * np.pi)
 	theta = theta
 	return r, theta
+
+def pubIm(im):
+	img_show = np.array(im, np.uint8)
+	msg1 = CompressedImage()
+	msg1.format = "jpeg"
+	msg1.header.stamp = rospy.Time.now()
+	msg1.data = np.array(cv2.imencode('.jpg', img_show)[1]).tostring()
+	pub.publish(msg1)
 
 def Process():
 	global Img_frame, preImg_gray, count, p0, p1, good_new, good_old, r_met, theta_met, status, mask, new_pos, old_pos
@@ -179,6 +188,9 @@ def tracking_callback(msg):
 
 if __name__ == '__main__':
 	rospy.init_node('SonarTracking', anonymous=True)
+	
+	pub = rospy.Publisher('/image/Tracking', CompressedImage, queue_size=1)
+	
 	subTopic = '/imaging_sonar'
 	sub = rospy.Subscriber(subTopic, Image, image_callback,  queue_size = 1)
 	rospy.Service('/sonar_image', sonar_srv(), tracking_callback)
