@@ -181,7 +181,7 @@ def tracking_callback(msg):
 
 if __name__ == '__main__':
 	rospy.init_node('SonarTracking', anonymous=True)
-
+#
 	pub = rospy.Publisher('/image/Tracking', CompressedImage, queue_size=1)
 
 	subTopic = '/img_sonar/compressed'
