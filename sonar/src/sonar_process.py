@@ -8,17 +8,14 @@ import roslib
 import rospy
 import math
 from sensor_msgs.msg import CompressedImage
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
 
 from sonar.msg import sonar_msg
 from sonar.srv import sonar_srv
 
-# Instantiate CvBridge
-bridge = CvBridge()
-
-width, height = 500, 200
-Img_frame, preImg_gray = None, None
+width = 500
+height = 200
+Img_frame = None
+preImg_gray = None
 count = 0
 index = 0
 p0, p1 = [], []
@@ -163,12 +160,9 @@ def Process():
 def image_callback(ros_data):
 	global Img_frame, width, height, index
 	index += 1
-	print "index = %s" %index
-	try:
-		print "Get an Image!"
-		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "mono8"),(width, height))
-	except CvBridgeError, e:
-		print (e)
+	#print "index = %s" %index
+	np_arr = np.fromstring(ros_data.data, np.uint8)
+	Img_frame = cv2.resize(cv2.imdecode(np_arr, 1),(width, height))	
 
 def tracking_callback(msg):
 	print msg
