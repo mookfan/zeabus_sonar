@@ -7,21 +7,25 @@ import numpy as np
 import roslib
 import rospy
 import math
-from sensor_msgs.msg import CompressedImage, Image
+from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
 from sonar.msg import sonar_msg
 from sonar.srv import sonar_srv
 
-width = 500
-height = 200
-Img_frame = None
-preImg_gray = None
+# Instantiate CvBridge
+bridge = CvBridge()
+
+width, height = 500, 200
+Img_frame, preImg_gray = None, None
 count = 0
 index = 0
 p0, p1 = [], []
+new_pos, old_pos = [], []
 good_new, good_old = [], []
-position = []
+
+r_out, theta_out = [], []
 
 r_met = 0
 status = False
@@ -36,12 +40,12 @@ def CornerDetect(Img_gray):
                            minDistance  = 10,
                            blockSize    = 7 )
 	blur = cv2.medianBlur(Img_gray, 5)
-	rth, Img_gray = cv2.threshold(blur, 25, 255, 0)
-	p0 = cv2.goodFeaturesToTrack(Img_gray, mask=None, **feature_params)
-	for i in range (0,len(p0)):
+	rth, Img_gray_th = cv2.threshold(blur, 25, 255, 0)
+	p0 = cv2.goodFeaturesToTrack(Img_gray_th, mask=None, **feature_params)
+	"""for i in range (0,len(p0)):
 		cv2.circle(Img_frame, (p0[i][0][0], p0[i][0][1]), 5, (142, 164, 255), -1)
-	#cv2.imshow('Corner', Img_frame)
-	Img_frame = cv2.cvtColor(Img_gray, cv2.COLOR_GRAY2BGR)
+	cv2.imshow('Corner', Img_frame)
+	Img_frame = cv2.cvtColor(Img_gray, cv2.COLOR_GRAY2BGR)"""
 	mask = np.zeros_like(Img_frame)
 	return p0, mask
 
@@ -50,24 +54,22 @@ def OpticalFlow(Img_gray):
 	lk_params = dict( winSize  = (30,30),
                       maxLevel = 2,
                       criteria = (cv2.TERM_CRITERIA_EPS |cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-	#print '======================'
-	#print Img_gray.shape
-	#print preImg_gray.shape
-	#print '========++++=========='
 	p1, st, err = cv2.calcOpticalFlowPyrLK(preImg_gray, Img_gray, p0, None, **lk_params)
 	return p1, st
 
-def FindObject(new_pos, old_pos, Img_gray):
-	global count, r_met, theta_met, status, mask, position
+def FindObject(Img_gray):
+	global count, r_met, theta_met, status, mask, new_pos, old_pos
+	global r_out, theta_out
 	r_met = 0 
 	count_newLast, index = 0, 0
 	est_obj = []
-	position = []
 	find_obj = False
 	status = False
 	row, col = Img_gray.shape[0], Img_gray.shape[1]
 	x_ref, y_ref = col/2, row
-	
+
+	r_out, theta_out = [], []
+
 	Img_sh = cv2.cvtColor(Img_gray, cv2.COLOR_GRAY2BGR)
 	if len(new_pos) == 0:
 		new_pos = old_pos
@@ -88,18 +90,18 @@ def FindObject(new_pos, old_pos, Img_gray):
 				print "Duplicate"
 			else:
 				r_met, theta_met = meters(Obj_x, Obj_y, x_ref, y_ref)
+				theta_met = theta_met + 90
+				r_met, theta_met = int(round(r_met)), int(round(theta_met))
 				print "Estimate # %d frame Object # %d: R = %.2f meters, Theta = %.2f" % (count, j + 1, r_met, theta_met)
-				r_met, theta_met = round(r_met,2), round(theta_met,2)
-				position.append((r_met,theta_met))
+				r_out.append(r_met)
+				theta_out.append(theta_met)
 				cv2.circle(Img_sh, (Obj_x, Obj_y), 5, (102, 255, 204), -1)
 				pre_est_x, pre_est_y = Obj_x, Obj_y
 		status = True
 		#cv2.imshow('Object n frame', Img_sh)
 	else:
 		print "Can't find Object"
-	print "position"
-	print position
-	return position
+	return r_out, theta_out, Img_sh
 
 def meters(x,y,x_ref, y_ref):
 	global r_met, theta_met, status
@@ -109,15 +111,12 @@ def meters(x,y,x_ref, y_ref):
 	r = np.sqrt(np.power(x_met - x_ref, 2) + np.power(y_met - y_ref, 2))
 	theta = ((math.atan2((x_ref - x_met), (y_ref - y_met))) * 360) / (2 * np.pi)
 	theta = theta
-	"""print "===meter==="
-	print r
-	print theta"""
 	return r, theta
 
 def Process():
-	global Img_frame, preImg_gray, count, p0, p1, good_new, good_old, r_met, theta_met, status, mask
+	global Img_frame, preImg_gray, count, p0, p1, good_new, good_old, r_met, theta_met, status, mask, new_pos, old_pos
+	global r_out, theta_out
 	new_pos, old_pos = [], []
-	position =[]
 	last_frame = False
 	res = sonar_msg()  #!!
 
@@ -133,9 +132,12 @@ def Process():
 	Img_gray = cv2.cvtColor(Img_frame, cv2.COLOR_BGR2GRAY)
 
 	if count == 1:
+		print "Corner", count
 		p0, mask = CornerDetect(Img_gray)
 		preImg_gray = Img_gray.copy()
+		#print p0
 	else:
+		print "optical", count
 		ref_gray = Img_gray.copy()
 		p1, st = OpticalFlow(Img_gray)
 		good_new = p1[st == 1]
@@ -149,11 +151,11 @@ def Process():
 				cv2.line(mask, (a, b), (c, d), (255, 212, 128), 2)
 				cv2.circle(Img_frame, (a, b), 5, (77, 77, 255), -1)
 		Img_re = cv2.add(Img_frame, mask)
-		cv2.imshow('frame', Img_re)
 		p0 = good_new.reshape(-1, 1, 2)
 		preImg_gray = ref_gray.copy()
-	position = FindObject(new_pos, old_pos, Img_gray)
-	res.pos = position
+	r_out,theta_out, Img_sh = FindObject(Img_gray)
+	res.r = r_out
+	res.theta = theta_out
 	res.status = status
 	cv2.waitKey(1)
 	return res
