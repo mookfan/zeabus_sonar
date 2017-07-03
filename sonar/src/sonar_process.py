@@ -102,7 +102,15 @@ def FindObject(Img_gray):
 		#cv2.imshow('Object n frame', Img_sh)
 	else:
 		print "Can't find Object"
-	return r_out, theta_out, Img_sh
+	return r_out, theta_out
+
+def pubIm(im):
+	img_show = np.array(im, np.uint8)
+	msg1 = CompressedImage()
+	msg1.format = "jpeg"
+	msg1.header.stamp = rospy.Time.now()
+	msg1.data = np.array(cv2.imencode('.jpg', img_show)[1]).tostring()
+	pub.publish(msg1)
 
 def meters(x,y,x_ref, y_ref):
 	global r_met, theta_met, status
@@ -113,14 +121,6 @@ def meters(x,y,x_ref, y_ref):
 	theta = ((math.atan2((x_ref - x_met), (y_ref - y_met))) * 360) / (2 * np.pi)
 	theta = theta
 	return r, theta
-
-def pubIm(im):
-	img_show = np.array(im, np.uint8)
-	msg1 = CompressedImage()
-	msg1.format = "jpeg"
-	msg1.header.stamp = rospy.Time.now()
-	msg1.data = np.array(cv2.imencode('.jpg', img_show)[1]).tostring()
-	pub.publish(msg1)
 
 def Process():
 	global Img_frame, preImg_gray, count, p0, p1, good_new, good_old, r_met, theta_met, status, mask, new_pos, old_pos
@@ -144,7 +144,6 @@ def Process():
 		print "Corner", count
 		p0, mask = CornerDetect(Img_gray)
 		preImg_gray = Img_gray.copy()
-		#print p0
 	else:
 		print "optical", count
 		ref_gray = Img_gray.copy()
@@ -162,7 +161,7 @@ def Process():
 		Img_re = cv2.add(Img_frame, mask)
 		p0 = good_new.reshape(-1, 1, 2)
 		preImg_gray = ref_gray.copy()
-	r_out,theta_out, Img_sh = FindObject(Img_gray)
+	r_out,theta_out = FindObject(Img_gray)
 	res.r = r_out
 	res.theta = theta_out
 	res.status = status
@@ -174,12 +173,9 @@ def image_callback(ros_data):
 	index += 1
 	print "index = %s" %index
 	try:
-		#print "Get an Image!"
 		Img_frame = cv2.resize(bridge.imgmsg_to_cv2(ros_data, "bgr8"),(width, height))
 	except CvBridgeError, e:
 		print (e)
-	#else:
-		#print "..."
 
 def tracking_callback(msg):
 	print msg
@@ -188,10 +184,9 @@ def tracking_callback(msg):
 
 if __name__ == '__main__':
 	rospy.init_node('SonarTracking', anonymous=True)
-	
+	## Publish for show an image
 	pub = rospy.Publisher('/image/Tracking', CompressedImage, queue_size=1)
-	
-	subTopic = '/imaging_sonar'
+	subTopic = "/imaging_sonar"
 	sub = rospy.Subscriber(subTopic, Image, image_callback,  queue_size = 1)
 	rospy.Service('/sonar_image', sonar_srv(), tracking_callback)
-	rospy.spin()		
+	rospy.spin()
